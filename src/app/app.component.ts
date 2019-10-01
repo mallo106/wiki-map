@@ -13,7 +13,7 @@ export class AppComponent implements OnInit {
   private wikiApi: WikiRestApi;
   private Graph: ForceGraph3D;
   private depth = 5;
-  private bredth = 3;
+  private breadth = 3;
   constructor(http: HttpClient) {
     this.wikiApi = new WikiRestApi(http);
     this.Graph = new ForceGraph3D();
@@ -24,9 +24,9 @@ export class AppComponent implements OnInit {
       .graphData({nodes: [], links: []})
       .nodeAutoColorBy('id')
       .nodeLabel(node => `${node.title}`);
-    //Set the root to the most viewed article and expand from there
+    // Set the root to the most viewed article and expand from there
     this.wikiApi.getMostPopularArticle().subscribe(theArticle => {
-      this.getLinks(theArticle.article, -1, this.bredth);
+      this.getLinks(theArticle.article, -1, this.breadth);
     });
   }
 
