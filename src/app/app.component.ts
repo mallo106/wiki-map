@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import ForceGraph3D from '3d-force-graph';
-import {BacklinksAPI} from './wiki_api/backlinks_api';
+import {WikiRestApi} from './wiki_api/wiki-rest-api';
 
 @Component({
   selector: 'app-root',
@@ -10,38 +10,55 @@ import {BacklinksAPI} from './wiki_api/backlinks_api';
 })
 export class AppComponent implements OnInit {
   title = 'app';
-  private linksAPI: BacklinksAPI;
+  private wikiApi: WikiRestApi;
   private Graph: ForceGraph3D;
+  private depth = 5;
+  private bredth = 3;
   constructor(http: HttpClient) {
-    this.linksAPI = new BacklinksAPI(http);
+    this.wikiApi = new WikiRestApi(http);
     this.Graph = new ForceGraph3D();
   }
 
   ngOnInit(): void {
-    const aRoot = -1;
-    this.linksAPI.getLinks('Spam (food)', 50)
+    this.Graph(document.getElementById('test'))
+      .graphData({nodes: [], links: []})
+      .nodeAutoColorBy('id')
+      .nodeLabel(node => `${node.title}`);
+    //Set the root to the most viewed article and expand from there
+    this.wikiApi.getMostPopularArticle().subscribe(theArticle => {
+      this.getLinks(theArticle.article, -1, this.bredth);
+    });
+  }
+
+  private getLinks(theTitle: string, theId: number, theLinkCount: number, theDepth?: number) {
+    const aDepth = theDepth === undefined ? 0 : theDepth;
+    this.wikiApi.getLinks(theTitle, theLinkCount)
       .subscribe(theLinks => {
-        console.log(theLinks.query.backlinks);
-        const aNodes = [{
-          id: aRoot,
-          title: 'Spam (food)'
-        }];
-        const aLinks = [];
-        theLinks.query.backlinks.forEach(aLink => {
-          aNodes.push({
-            id: aLink.pageid,
-            title: aLink.title
+        const { nodes, links } = this.Graph.graphData();
+        if (aDepth === 0) {
+          nodes.push({
+            id: theId,
+            title: theTitle
           });
-          aLinks.push({
-            source: aRoot,
+        }
+        theLinks.query.backlinks.forEach(aLink => {
+          if (nodes.findIndex(aNode => aNode.id === aLink.pageid) < 0) {
+            nodes.push({
+              id: aLink.pageid,
+              title: aLink.title
+            });
+          }
+          links.push({
+            source: theId,
             target: aLink.pageid
           });
+          if (aDepth < this.depth) {
+            setTimeout(() => {
+              this.getLinks(aLink.title, aLink.pageid, theLinkCount, aDepth + 1);
+            }, 3000);
+          }
         });
-        this.Graph(document.getElementById('test'))
-        .graphData({
-          links: aLinks,
-          nodes: aNodes
-        }).nodeLabel(node => `${node.title}`);
+        this.Graph.graphData({links, nodes});
       });
   }
 }
